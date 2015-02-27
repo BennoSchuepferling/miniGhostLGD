@@ -13,7 +13,15 @@
 #include "../libgeodecomp/src/libgeodecomp.h"
 #include <libflatarray/short_vec.hpp>
 #include <cmath>
+/*
+class MiniGhostContainer
+{
+public:
+    static int numberOfVars;
+};
 
+int MiniGhostContainer::numberOfVars = 0;
+*/
 using namespace LibGeoDecomp;
 
 class Cell
@@ -24,28 +32,28 @@ public:
         public APITraits::HasUpdateLineX,
         //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
 	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
-        //public APITraits::HasOpaqueMPIDataType<Cell>,
+        public APITraits::HasOpaqueMPIDataType<Cell>,
         public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
         //public APITraits::HasCubeTopology<3>,
         //public APITraits::HasPredefinedMPIDataType<double>,
         public APITraits::HasSoA
     {};
-// raus!!
+// raus!! ??
 /*
-    inline explicit Cell(double v = 0) :
-        temp(v)
+    inline explicit Cell(int v = 5) :
+        numberOfVars(v)
     {}
 */
     template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingle(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew)
+    static void updateSingle(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
     {
-/*        hoodNew.temp()[0] = 
-            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[0] +
-            hoodOld[FixedCoord< 0, -1,  0>()].temp()[0] +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp()[0] +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp()[0] +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()[0]) * (1.0 / 5.0);
-*/    }
+        hoodNew.temp()[currentVar] = //hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar];
+            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar]) * (1.0 / 5.0);
+    }
 
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
@@ -64,15 +72,17 @@ public:
         {
 //         *** 2D5PT ***
             hoodNew.temp() = 
-            hoodOld[FixedCoord<-1,  0,  0>()].temp() +
+            (hoodOld[FixedCoord<-1,  0,  0>()].temp() +
             hoodOld[FixedCoord< 0, -1,  0>()].temp() +
             hoodOld[FixedCoord< 0,  0,  0>()].temp() +
             hoodOld[FixedCoord< 0,  1,  0>()].temp() +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp() * factor;
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()) * factor;
         }
 */
         for (; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
-            updateSingle(hoodOld, hoodNew);
+            for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
+                updateSingle(hoodOld, hoodNew, currentVar);
+            }
         }
 
     }
@@ -178,12 +188,15 @@ public:
             }
  
     }
-*/    double temp[40] = {0};
+*/  
+    static int numberOfVars;  
+    double temp[40] = {0};
 };
 
 
 LIBFLATARRAY_REGISTER_SOA(
     Cell,
+//    ((int)(numberOfVars))
     ((double)(temp)(40))
                           )
 
@@ -191,8 +204,7 @@ LIBFLATARRAY_REGISTER_SOA(
 class CellInitializer : public SimpleInitializer<Cell>
 {
 public:
-
-using Initializer::Topology;
+    using Initializer::Topology;
 
     CellInitializer(const unsigned dimX, const unsigned dimY, const unsigned dimZ, const unsigned num_timesteps, int numVars, double *sourceTotal_, double *spikes_ , int *spikeLoc) :
     SimpleInitializer<Cell>(Coord<3>(dimX, dimY, dimZ), num_timesteps),
@@ -208,7 +220,9 @@ using Initializer::Topology;
 
     virtual void grid(GridBase<Cell, 3> *ret)
     {
-/*		
+        
+        //Cell::numberOfVars = numberOfVars;
+        		
         CoordBox<3> rect = ret->boundingBox();        
         for (CoordBox<3>::Iterator i = rect.begin(); i != rect.end(); ++i)
         {
@@ -228,43 +242,45 @@ um checkerboard zu testen
 //new function in town - pseudoRand(*i);
 	    //seede den random nr generator 
 	    
-  /*          Cell cell = Cell();
+            Cell cell;
 
-            for ( int k = 0; k < numberOfVars ; ++k )
+            for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
-//                cell.temp[k] = 1.0;
+                cell.temp[currentVar] = Random::gen_d();
             }
-
+            
             ret->set(*i, cell);
-
-            // RANDOM_NUMBER max?
-	    //ret->set(*i, Cell(Random::gen_d()));
-	
-	    // DEBUG_GRID == 1
-	    //ret->set(*i, Cell(1.0));
 	}
 	
-	/// Todo: Set multiple first spikes
+	// set multiple first spikes
         Coord<3> c( (unsigned) spikeLocation[1],
 	            (unsigned) spikeLocation[2],
 		    (unsigned) spikeLocation[3]);
 		
         if (rect.inBounds(c)) 
         {
-	    std::cout << "WARNING---------------------------------------------------\n"
+	    Cell cell;
+ 
+            for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
+            {
+                cell.temp[currentVar] = spikes[currentVar];
+
+                std::cout << "WARNING---------------------------------------------------\n"
 	              << "WARNING: We're at Location " <<  spikeLocation[1] << ", " << spikeLocation[2] << ", " << spikeLocation[3] << "\n"
-	              << "WARNING: and we 're setting the initial spike " << std::setprecision (15) << spikes[0] << " into the grid\n"
+	              << "WARNING: and we 're setting the initial spike " << std::setprecision (15) << spikes[currentVar] << " into the grid\n"
 		      << "WARNING---------------------------------------------------\n";
-	
-            //ret->set(c, Cell(spikes[0]));
+            }
+            
+            ret->set(c, cell);
+
         }
 		    
         // update sourceTotal on every node
-	for( int currentVar =0; currentVar< numberOfVars; currentVar++ )
+	for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
         {
 	    sourceTotal[currentVar] = sourceTotal[currentVar] + spikes[currentVar];
         }
-*/    }
+    }
 
 private:
     unsigned dimX;
@@ -276,7 +292,7 @@ private:
     int *spikeLocation;
 };
 
-/*
+
 class ToleranceChecker : public Clonable<ParallelWriter<Cell>, ToleranceChecker>
 {
 public:
@@ -284,13 +300,9 @@ public:
 	
     ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0,  double *sourceTotal = NULL) :
     Clonable<ParallelWriter<Cell>, ToleranceChecker>("", outputPeriod),
-//    localSum(0),
-//    globalSum(0),
     num_vars(numberOfVars),
     err_tol(errorTol)
     {
-//        localSum = {0};
-//        globalSum = {0};
         src_total = sourceTotal;
     }
 	
@@ -303,39 +315,38 @@ public:
 		std::size_t rank,
 		bool lastCall)
     {		
-	
-	//for( int j = 0 ; j < num_vars ; ++j )
-	//{
+	// summing the local grid (not sure what access pattern is better)
+	for( int currentVar = 0 ; currentVar < num_vars ; ++currentVar )
+	{
 	    for (RegionType::Iterator i = validRegion.begin(); i != validRegion.end(); ++i) { 
-	        localSum[0] += grid.get(*i).temp[0];
-	        //gridSum[j] += grid.get(*i).temp[j]; 
+	        localSum[currentVar] += grid.get(*i).temp[currentVar];
 	    }
-	//} 
+	} 
 			
 	// so we're done summing the local grid
         if(lastCall)
         {
             //tag fuer einzigartigkeit
-            MPI_Allreduce(&(localSum[0]), &(globalSum[0]), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            
-            if( rank == 0 )
-            	std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[0] << "\n";
-            
+            MPI_Allreduce(localSum, globalSum, num_vars, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        
             // we're still missing the feature how many of our grids (variables in this case) should be summed
             //(see MG_BUFINIT.F)
             
-            int j = 0;
             // checking error tolerance
-            //for( int j = 0 ; j < num_vars ; ++j )
-            //{
-            	if( ( std::abs(src_total[j] - globalSum[j]) / src_total[j] ) > err_tol )
-            		std::cout << "error_tol(" << step << ") has not been met\n";
-            //}
+            for( int currentVar = 0 ; currentVar < num_vars ; ++currentVar )
+            {
+                if( rank == 0 )
+            	    std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[currentVar] << "\n";
+
+            	if( ( std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar] ) > err_tol )
+            	    std::cout << "error_tol(" << step << ") has not been met\n";
+                    
+                // reset local and global sum since we're done with this step (better memcpy)
+                localSum[currentVar] = 0;
+                globalSum[currentVar] = 0;
+            }
             
-            // reset local and global sum since we're done with this step
-            localSum[0] = 0;
-            globalSum[0] = 0;
-       }
+        }
     }
         
 private: 
@@ -388,16 +399,21 @@ public:
 	// setting spikes even in ghostzones							
 	if(validRegion.count(currentCoord))
 	{
-	    Cell cell = grid->get(currentCoord);
-	    cell.temp[0] = spikes[(currentSpike * numberOfVars) + 0];
-			
-	    std::cout << "WARNING---------------------------------------------------\n"
-		      << "WARNING: We're at Location " <<  spikeLocation[(currentSpike * 4) + 1] << ", " << spikeLocation[(currentSpike * 4) + 2] << ", " << spikeLocation[(currentSpike * 4) + 3] << "\n"
-		      << "WARNING: We're rank: " << rank << "\n"
-		      << "WARNING: and we 're setting spike " << std::setprecision (15) << cell.temp << " into grid at timestep " << step << "\n"
-		      << "WARNING---------------------------------------------------\n";
-		
-			grid->set(currentCoord, cell);	
+            //not really necessary is it?
+	    //Cell cell = grid->get(currentCoord);
+
+            Cell cell;
+	    for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
+            {
+                cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
+
+                std::cout << "WARNING---------------------------------------------------\n"
+                          << "WARNING: We're at Location " <<  spikeLocation[(currentSpike * 4) + 1] << ", " << spikeLocation[(currentSpike * 4) + 2] << ", " << spikeLocation[(currentSpike * 4) + 3] << "\n"
+                          << "WARNING: We're rank: " << rank << "\n"
+                          << "WARNING: and we 're setting spike " << std::setprecision (15) << cell.temp[currentVar] << " into grid at timestep " << step << "\n"
+                          << "WARNING---------------------------------------------------\n";
+            }
+            grid->set(currentCoord, cell);	
 			
 	}
 	// everybody refresh sourceTotal - whether or not it belongs to this local grid
@@ -419,34 +435,35 @@ private:
     int *spikeLocation;
     int currentSpike;
 };
-*/
+
+int Cell::numberOfVars = 0;
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
 extern "C" void simulate_(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
 {
-
+    Cell::numberOfVars = *num_vars;
+ 
     Typemaps::initializeMaps();
     {
 	//SerialSimulator<Cell> sim(new CellInitializer(dimX, dimY, num_timesteps));
-//	CellInitializer *init =  new CellInitializer(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
+	CellInitializer *init =  new CellInitializer(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
 	
-//        std::cout << init << std::endl;
 	//CheckerBoarding		
 	HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> > sim(
-			NULL,//init,
+			init,
 			//MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
 			0,
 			*num_tsteps,
 			1);
-/*	
+	
 	ToleranceChecker *toleranceChecker = new ToleranceChecker(1, *num_vars, *err_tol, source_total);
 	sim.addWriter(toleranceChecker);
 
 	SpikeJab *spikeJab = new SpikeJab(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
 	sim.addSteerer(spikeJab);
-*//*	
+	
 	sim.run();
-*/    }
+    }
     
 }
