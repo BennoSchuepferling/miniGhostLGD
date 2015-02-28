@@ -13,6 +13,15 @@
 #include "../libgeodecomp/src/libgeodecomp.h"
 #include <libflatarray/short_vec.hpp>
 #include <cmath>
+
+
+#define STENCIL_NONE 20
+#define STENCIL_2D5PT 21 //  ! Default
+#define STENCIL_2D9PT 22
+#define STENCIL_3D7PT 23
+#define STENCIL_3D27PT 24
+
+
 /*
 class MiniGhostContainer
 {
@@ -44,10 +53,12 @@ public:
         numberOfVars(v)
     {}
 */
+
+    //	*** 2D5PT ***
     template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingle(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
     {
-        hoodNew.temp()[currentVar] = //hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar];
+        hoodNew.temp()[currentVar] = 
             (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
@@ -55,140 +66,96 @@ public:
             hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar]) * (1.0 / 5.0);
     }
 
+    // 	*** 2D9PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] =
+            (hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
+		        
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+			
+            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar]) * (1.0 / 9.0);			
+    }
+    
+    //  *** 3D7PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] =
+            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +		
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +	
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar]) / (1.0 / 7.0); 
+    }
+    
+    //  *** 3D27PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] = 
+            // *** BACK ***
+            (hoodOld[FixedCoord<-1, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1, -1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1, -1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1, -1>()].temp()[currentVar] +
+            
+            // *** MIDDLE ***
+            hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar] +
+            
+            // *** FRONT ***
+            hoodOld[FixedCoord<-1, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) / (1.0 / 27.0);
+    }
+    
+
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        updateSingle(hoodOld, hoodNew);
-//        ++hoodOld.index();
-//        ++hoodNew.index;
-/*
-        double factor = 1.0 / 5.0;
-//        double factor = 1.0 / 9.0;
-//        double factor = 1.0 / 7.0;
-//        double factor = 1.0 / 27.0;
- 
-        for (; hoodOld.index() < indexEnd; hoodOld.index() += 1, hoodNew.index += 1) 
-        {
-//         *** 2D5PT ***
-            hoodNew.temp() = 
-            (hoodOld[FixedCoord<-1,  0,  0>()].temp() +
-            hoodOld[FixedCoord< 0, -1,  0>()].temp() +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp() +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp() +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()) * factor;
-        }
-*/
         for (; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
-                updateSingle(hoodOld, hoodNew, currentVar);
+                updateSingleStencil(hoodOld, hoodNew, currentVar);
             }
         }
 
     }
-/*    template<typename NEIGHBORHOOD>
-    static void updateLineX(Cell *target, long *x, long endX, const NEIGHBORHOOD& hood, const int nanoStep )
-    {
-//        LIBFLATARRAY_LOOP_PEELER(double, 8, long, x, endX, updateLineImplmentation, target, hood, nanoStep);
-    }
-*/
-/*
-    template<typename DOUBLE, typename NEIGHBORHOOD>
-    static void updateLineImplmentation(
-    		long *x,
-		long endX,
-		Cell *target,
-		const NEIGHBORHOOD& hood,
-		const int /* nanoStep *//*)
-    {
-//	vectorized SoA
-//	int num_vars = 1;
-//	for(int i = 0; i < num_vars; ++i){
-            DOUBLE factor = 1.0 / 5.0;
-//            DOUBLE factor = 1.0 / 9.0;
-//            DOUBLE factor = 1.0 / 7.0;
-//            DOUBLE factor = 1.0 / 27.0;
-
-            for (; *x < endX; ++*x) 
-            {	
-//		*** 2D5PT ***
-                DOUBLE buf = hood[FixedCoord<-1,  0,  0>()].temp;
-                	buf += hood[FixedCoord< 0, -1,  0>()].temp;
-                        buf += hood[FixedCoord< 0,  0,  0>()].temp;
-                        buf += hood[FixedCoord< 0,  1,  0>()].temp;
-                        buf += hood[FixedCoord< 1,  0,  0>()].temp;
-			buf *= factor;
-/*			
-// 		*** 2D9PT ***
-                DOUBLE buf = hood[FixedCoord<-1, -1,  0>()].temp;
-                	buf += hood[FixedCoord<-1,  0,  0>()].temp;
-                	buf += hood[FixedCoord<-1,  1,  0>()].temp;
-			
-			buf += hood[FixedCoord< 0, -1,  0>()].temp;
-			buf += hood[FixedCoord< 0,  0,  0>()].temp;
-			buf += hood[FixedCoord< 0,  1,  0>()].temp;
-			
-			buf += hood[FixedCoord< 1, -1,  0>()].temp;
-			buf += hood[FixedCoord< 1,  0,  0>()].temp;
-			buf += hood[FixedCoord< 1,  1,  0>()].temp;
-			buf *= factor;			
-
-// 		*** 3D7PT ***
-		DOUBLE buf = hood[FixedCoord<-1,  0,  0>()].temp;		
-			buf += hood[FixedCoord< 0, -1,  0>()].temp;
-			buf += hood[FixedCoord< 0,  0,  0>()].temp;
-			buf += hood[FixedCoord< 0,  1,  0>()].temp;	
-			buf += hood[FixedCoord< 1,  0,  0>()].temp;
-			buf += hood[FixedCoord< 0,  0, -1>()].temp;
-			buf += hood[FixedCoord< 0,  0,  1>()].temp;
-			buf *= factor;
-
-// 		*** 3D27PT ***
-		DOUBLE buf = hood[FixedCoord<-1, -1, -1>()].temp;
-			buf += hood[FixedCoord<-1,  0, -1>()].temp;
-			buf += hood[FixedCoord<-1,  1, -1>()].temp;
-			
-			buf += hood[FixedCoord< 0, -1, -1>()].temp;
-			buf += hood[FixedCoord< 0,  0, -1>()].temp;
-			buf += hood[FixedCoord< 0,  1, -1>()].temp;
-			
-			buf += hood[FixedCoord< 1, -1, -1>()].temp;
-			buf += hood[FixedCoord< 1,  0, -1>()].temp;
-			buf += hood[FixedCoord< 1,  1, -1>()].temp;
-
-			// *** MIDDLE ***
-			buf += hood[FixedCoord<-1, -1,  0>()].temp;
-			buf += hood[FixedCoord<-1,  0,  0>()].temp;
-			buf += hood[FixedCoord<-1,  1,  0>()].temp;
-			
-			buf += hood[FixedCoord< 0, -1,  0>()].temp;
-			buf += hood[FixedCoord< 0,  0,  0>()].temp;
-			buf += hood[FixedCoord< 0,  1,  0>()].temp;
-			
-			buf += hood[FixedCoord< 1, -1,  0>()].temp;
-			buf += hood[FixedCoord< 1,  0,  0>()].temp;
-			buf += hood[FixedCoord< 1,  1,  0>()].temp;
-
-			// *** FRONT ***
-			buf += hood[FixedCoord<-1, -1,  1>()].temp;
-			buf += hood[FixedCoord<-1,  0,  1>()].temp;
-			buf += hood[FixedCoord<-1,  1,  1>()].temp;
-			
-			buf += hood[FixedCoord< 0, -1,  1>()].temp;
-			buf += hood[FixedCoord< 0,  0,  1>()].temp;
-			buf += hood[FixedCoord< 0,  1,  1>()].temp;
-			
-			buf += hood[FixedCoord< 1, -1,  1>()].temp;
-			buf += hood[FixedCoord< 1,  0,  1>()].temp;	
-			buf += hood[FixedCoord< 1,  1,  1>()].temp;
-			buf *= factor;
-*/ 			
-/*		&target[*x].temp << buf;
-	
-            }
- 
-    }
-*/  
+    
     static int numberOfVars;  
     double temp[40] = {0};
 };
@@ -440,9 +407,11 @@ int Cell::numberOfVars = 0;
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
-extern "C" void simulate_(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
+extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
 {
     Cell::numberOfVars = *num_vars;
+
+    std::cout << " <<<<<<<< " << *stencil << " >>>>>>>>>";
  
     Typemaps::initializeMaps();
     {
