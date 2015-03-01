@@ -42,14 +42,14 @@ public:
         //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
 	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
+        //public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        public APITraits::HasCubeTopology<3>,
         //public APITraits::HasPredefinedMPIDataType<double>,
         public APITraits::HasSoA
     {};
 // raus!! ??
 /*
-    inline explicit Cell(int v = 5) :
+    inline explicit Cell(int v = 5) //:
         numberOfVars(v)
     {}
 */
@@ -58,14 +58,14 @@ public:
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
     {
-        hoodNew.temp()[currentVar] = 
+        hoodNew.temp()[currentVar] = //hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar];
             (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar]) * (1.0 / 5.0);
     }
-
+/*
     // 	*** 2D9PT ***
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
@@ -142,13 +142,16 @@ public:
             hoodOld[FixedCoord< 1,  0,  1>()].temp()[currentVar] +
             hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) / (1.0 / 27.0);
     }
-    
+*/   
 
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-        for (; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
+//        int indexStartOld = hoodOld.index();
+//        int indexStartNew = hoodNew.index;
+
+        for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
             }
@@ -209,16 +212,16 @@ um checkerboard zu testen
 //new function in town - pseudoRand(*i);
 	    //seede den random nr generator 
 	    
-            Cell cell;
+            Cell cell = Cell();
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
-                cell.temp[currentVar] = Random::gen_d();
+                cell.temp[currentVar] = 1;//Random::gen_d();
             }
             
             ret->set(*i, cell);
 	}
-	
+/*	
 	// set multiple first spikes
         Coord<3> c( (unsigned) spikeLocation[1],
 	            (unsigned) spikeLocation[2],
@@ -226,7 +229,7 @@ um checkerboard zu testen
 		
         if (rect.inBounds(c)) 
         {
-	    Cell cell;
+	    Cell cell = Cell();
  
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
@@ -241,12 +244,13 @@ um checkerboard zu testen
             ret->set(c, cell);
 
         }
-		    
+*/		    
         // update sourceTotal on every node
 	for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
         {
 	    sourceTotal[currentVar] = sourceTotal[currentVar] + spikes[currentVar];
         }
+
     }
 
 private:
@@ -306,7 +310,7 @@ public:
             	    std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[currentVar] << "\n";
 
             	if( ( std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar] ) > err_tol )
-            	    std::cout << "error_tol(" << step << ") has not been met\n";
+            	    std::cout << "error_tol(" << step << ") has not been met for Variable " << currentVar << "\n";
                     
                 // reset local and global sum since we're done with this step (better memcpy)
                 localSum[currentVar] = 0;
@@ -369,7 +373,7 @@ public:
             //not really necessary is it?
 	    //Cell cell = grid->get(currentCoord);
 
-            Cell cell;
+            Cell cell = Cell();
 	    for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
                 cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
@@ -411,7 +415,7 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 {
     Cell::numberOfVars = *num_vars;
 
-    std::cout << " <<<<<<<< " << *stencil << " >>>>>>>>>";
+    std::cout << " <<<<<<<< " << *stencil << " >>>>>>>>>\n";
  
     Typemaps::initializeMaps();
     {
