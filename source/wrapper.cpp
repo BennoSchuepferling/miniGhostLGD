@@ -33,6 +33,7 @@ int MiniGhostContainer::numberOfVars = 0;
 */
 using namespace LibGeoDecomp;
 
+
 class Cell
 {
 public:
@@ -42,8 +43,8 @@ public:
         //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
 	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        //public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        public APITraits::HasCubeTopology<3>,
+        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        //public APITraits::HasCubeTopology<3>,
         //public APITraits::HasPredefinedMPIDataType<double>,
         public APITraits::HasSoA
     {};
@@ -170,6 +171,263 @@ LIBFLATARRAY_REGISTER_SOA(
     ((double)(temp)(40))
                           )
 
+class Cell2D5P
+{
+public:
+    class API :
+        public APITraits::HasFixedCoordsOnlyUpdate,
+        public APITraits::HasUpdateLineX,
+        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
+	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasOpaqueMPIDataType<Cell>,
+        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        //public APITraits::HasCubeTopology<3>,
+        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasSoA
+    {};
+
+    //	*** 2D5PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] =
+            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar]) * (1.0 / 5.0);
+    }
+
+
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
+                            HOOD_NEW& hoodNew, int /* nanoStep */)
+    {
+//        int indexStartOld = hoodOld.index();
+//        int indexStartNew = hoodNew.index;
+
+        for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
+            for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
+                updateSingleStencil(hoodOld, hoodNew, currentVar);
+            }
+        }
+
+    }
+    
+    static int numberOfVars;  
+    double temp[40] = {0};
+};
+
+
+LIBFLATARRAY_REGISTER_SOA(
+    Cell2D5P,
+//    ((int)(numberOfVars))
+    ((double)(temp)(40))
+                          )
+
+
+class Cell2D9P
+{
+public:
+    class API :
+        public APITraits::HasFixedCoordsOnlyUpdate,
+        public APITraits::HasUpdateLineX,
+        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
+	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasOpaqueMPIDataType<Cell>,
+        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        //public APITraits::HasCubeTopology<3>,
+        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasSoA
+    {};
+
+    // 	*** 2D9PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] =
+            (hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
+		        
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+			
+            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar]) * (1.0 / 9.0);			
+    }
+    
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
+                            HOOD_NEW& hoodNew, int /* nanoStep */)
+    {
+//        int indexStartOld = hoodOld.index();
+//        int indexStartNew = hoodNew.index;
+
+        for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
+            for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
+                updateSingleStencil(hoodOld, hoodNew, currentVar);
+            }
+        }
+
+    }
+    
+    static int numberOfVars;  
+    double temp[40] = {0};
+};
+
+
+LIBFLATARRAY_REGISTER_SOA(
+    Cell2D9P,
+//    ((int)(numberOfVars))
+    ((double)(temp)(40))
+                          )
+
+class Cell3D7P
+{
+public:
+    class API :
+        public APITraits::HasFixedCoordsOnlyUpdate,
+        public APITraits::HasUpdateLineX,
+        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
+	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasOpaqueMPIDataType<Cell>,
+        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        //public APITraits::HasCubeTopology<3>,
+        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasSoA
+    {};
+    
+    //  *** 3D7PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] =
+            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +		
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +	
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar]) / (1.0 / 7.0); 
+    }
+
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
+                            HOOD_NEW& hoodNew, int /* nanoStep */)
+    {
+//        int indexStartOld = hoodOld.index();
+//        int indexStartNew = hoodNew.index;
+
+        for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
+            for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
+                updateSingleStencil(hoodOld, hoodNew, currentVar);
+            }
+        }
+
+    }
+    
+    static int numberOfVars;  
+    double temp[40] = {0};
+};
+
+
+LIBFLATARRAY_REGISTER_SOA(
+    Cell3D7P,
+//    ((int)(numberOfVars))
+    ((double)(temp)(40))
+                          )
+
+
+class Cell3D27P
+{
+public:
+    class API :
+        public APITraits::HasFixedCoordsOnlyUpdate,
+        public APITraits::HasUpdateLineX,
+        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
+	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasOpaqueMPIDataType<Cell>,
+        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
+        //public APITraits::HasCubeTopology<3>,
+        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasSoA
+    {};
+   
+    //  *** 3D27PT ***
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
+    {
+        hoodNew.temp()[currentVar] = 
+            // *** BACK ***
+            (hoodOld[FixedCoord<-1, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1, -1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1, -1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0, -1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1, -1>()].temp()[currentVar] +
+            
+            // *** MIDDLE ***
+            hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar] +
+            
+            // *** FRONT ***
+            hoodOld[FixedCoord<-1, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord<-1,  1,  1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 0, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 0,  1,  1>()].temp()[currentVar] +
+            
+            hoodOld[FixedCoord< 1, -1,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  0,  1>()].temp()[currentVar] +
+            hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) / (1.0 / 27.0);
+    }
+
+    template<typename HOOD_OLD, typename HOOD_NEW>
+    static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
+                            HOOD_NEW& hoodNew, int /* nanoStep */)
+    {
+//        int indexStartOld = hoodOld.index();
+//        int indexStartNew = hoodNew.index;
+
+        for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
+            for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
+                updateSingleStencil(hoodOld, hoodNew, currentVar);
+            }
+        }
+
+    }
+    
+    static int numberOfVars;  
+    double temp[40] = {0};
+};
+
+
+LIBFLATARRAY_REGISTER_SOA(
+    Cell3D27P,
+//    ((int)(numberOfVars))
+    ((double)(temp)(40))
+                          )
+
+
 
 class CellInitializer : public SimpleInitializer<Cell>
 {
@@ -263,14 +521,16 @@ private:
     int *spikeLocation;
 };
 
-
-class ToleranceChecker : public Clonable<ParallelWriter<Cell>, ToleranceChecker>
+template<typename CELL>
+class ToleranceChecker : public Clonable<ParallelWriter<CELL>, ToleranceChecker<CELL>>
 {
 public:
-    typedef ParallelWriter<Cell>::GridType GridType;
+    using typename ParallelWriter<CELL>::RegionType;
+    using typename ParallelWriter<CELL>::CoordType;
+    typedef typename ParallelWriter<CELL>::GridType GridType;
 	
     ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0,  double *sourceTotal = NULL) :
-    Clonable<ParallelWriter<Cell>, ToleranceChecker>("", outputPeriod),
+    Clonable<ParallelWriter<CELL>, ToleranceChecker>("", outputPeriod),
     num_vars(numberOfVars),
     err_tol(errorTol)
     {
@@ -289,7 +549,7 @@ public:
 	// summing the local grid (not sure what access pattern is better)
 	for( int currentVar = 0 ; currentVar < num_vars ; ++currentVar )
 	{
-	    for (RegionType::Iterator i = validRegion.begin(); i != validRegion.end(); ++i) { 
+	    for (typename RegionType::Iterator i = validRegion.begin(); i != validRegion.end(); ++i) { 
 	        localSum[currentVar] += grid.get(*i).temp[currentVar];
 	    }
 	} 
@@ -416,8 +676,22 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
     Cell::numberOfVars = *num_vars;
 
     std::cout << " <<<<<<<< " << *stencil << " >>>>>>>>>\n";
+        
+    switch (*stencil) {
+        case STENCIL_NONE  : // do somethin
+                             break;
+        case STENCIL_2D5PT : // do somethin else
+                             break;
+        case STENCIL_2D9PT : // do somethin else but almost like the others
+                             break;
+        case STENCIL_3D7PT : // freakin' do it 
+                             break;
+        case STENCIL_3D27PT: // i swear u need to do it here too
+                             break;
+        default : std::cerr << " not a stecil \n";  break;
+    }
  
-    Typemaps::initializeMaps();
+//    Typemaps::initializeMaps();
     {
 	//SerialSimulator<Cell> sim(new CellInitializer(dimX, dimY, num_timesteps));
 	CellInitializer *init =  new CellInitializer(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
@@ -430,7 +704,7 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 			*num_tsteps,
 			1);
 	
-	ToleranceChecker *toleranceChecker = new ToleranceChecker(1, *num_vars, *err_tol, source_total);
+	ToleranceChecker<Cell> *toleranceChecker = new ToleranceChecker<Cell>(1, *num_vars, *err_tol, source_total);
 	sim.addWriter(toleranceChecker);
 
 	SpikeJab *spikeJab = new SpikeJab(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
