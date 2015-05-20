@@ -48,110 +48,15 @@ public:
         //public APITraits::HasPredefinedMPIDataType<double>,
         public APITraits::HasSoA
     {};
-// raus!! ??
-/*
-    inline explicit Cell(int v = 5) //:
-        numberOfVars(v)
-    {}
-*/
 
     //	*** 2D5PT ***
     template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
-    {
-        hoodNew.temp()[currentVar] = //hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar];
-            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar]) * (1.0 / 5.0);
-    }
-/*
-    // 	*** 2D9PT ***
-    template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
-    {
-        hoodNew.temp()[currentVar] =
-            (hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
-		        
-            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
-			
-            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar]) * (1.0 / 9.0);			
-    }
-    
-    //  *** 3D7PT ***
-    template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
-    {
-        hoodNew.temp()[currentVar] =
-            (hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +		
-            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +	
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar]) / (1.0 / 7.0); 
-    }
-    
-    //  *** 3D27PT ***
-    template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar)
-    {
-        hoodNew.temp()[currentVar] = 
-            // *** BACK ***
-            (hoodOld[FixedCoord<-1, -1, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  0, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  1, -1>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 0, -1, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1, -1>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 1, -1, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  0, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  1, -1>()].temp()[currentVar] +
-            
-            // *** MIDDLE ***
-            hoodOld[FixedCoord<-1, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  1,  0>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 0, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 1, -1,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  1,  0>()].temp()[currentVar] +
-            
-            // *** FRONT ***
-            hoodOld[FixedCoord<-1, -1,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  0,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord<-1,  1,  1>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 0, -1,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  1,  1>()].temp()[currentVar] +
-            
-            hoodOld[FixedCoord< 1, -1,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  0,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) / (1.0 / 27.0);
-    }
-*/   
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar) {}
 
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        int indexStartOld = hoodOld.index();
-//        int indexStartNew = hoodNew.index;
-
         for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
@@ -167,11 +72,10 @@ public:
 
 LIBFLATARRAY_REGISTER_SOA(
     Cell,
-//    ((int)(numberOfVars))
     ((double)(temp)(40))
                           )
 
-class Cell2D5P
+class Cell2D5PT
 {
 public:
     class API :
@@ -203,9 +107,6 @@ public:
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        int indexStartOld = hoodOld.index();
-//        int indexStartNew = hoodNew.index;
-
         for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
@@ -220,13 +121,12 @@ public:
 
 
 LIBFLATARRAY_REGISTER_SOA(
-    Cell2D5P,
-//    ((int)(numberOfVars))
+    Cell2D5PT,
     ((double)(temp)(40))
                           )
 
 
-class Cell2D9P
+class Cell2D9PT
 {
 public:
     class API :
@@ -263,9 +163,6 @@ public:
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        int indexStartOld = hoodOld.index();
-//        int indexStartNew = hoodNew.index;
-
         for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
@@ -280,12 +177,11 @@ public:
 
 
 LIBFLATARRAY_REGISTER_SOA(
-    Cell2D9P,
-//    ((int)(numberOfVars))
+    Cell2D9PT,
     ((double)(temp)(40))
                           )
 
-class Cell3D7P
+class Cell3D7PT
 {
 public:
     class API :
@@ -318,9 +214,6 @@ public:
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        int indexStartOld = hoodOld.index();
-//        int indexStartNew = hoodNew.index;
-
         for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
@@ -335,13 +228,12 @@ public:
 
 
 LIBFLATARRAY_REGISTER_SOA(
-    Cell3D7P,
-//    ((int)(numberOfVars))
+    Cell3D7PT,
     ((double)(temp)(40))
                           )
 
 
-class Cell3D27P
+class Cell3D27PT
 {
 public:
     class API :
@@ -405,9 +297,6 @@ public:
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
                             HOOD_NEW& hoodNew, int /* nanoStep */)
     {
-//        int indexStartOld = hoodOld.index();
-//        int indexStartNew = hoodNew.index;
-
         for ( ; hoodOld.index() < indexEnd; ++hoodOld.index(), ++hoodNew.index) {
             for(int currentVar = 0; currentVar < numberOfVars; ++currentVar) {
                 updateSingleStencil(hoodOld, hoodNew, currentVar);
@@ -422,8 +311,7 @@ public:
 
 
 LIBFLATARRAY_REGISTER_SOA(
-    Cell3D27P,
-//    ((int)(numberOfVars))
+    Cell3D27PT,
     ((double)(temp)(40))
                           )
 
@@ -698,7 +586,8 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 	CellInitializer<Cell> *init =  new CellInitializer<Cell>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
 	
 	//CheckerBoarding		
-	HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> > sim(
+	HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> > *sim = 
+                        new HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> >(
 			init,
 			//MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
 			0,
@@ -706,12 +595,12 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 			1);
 	
 	ToleranceChecker<Cell> *toleranceChecker = new ToleranceChecker<Cell>(1, *num_vars, *err_tol, source_total);
-	sim.addWriter(toleranceChecker);
+	sim->addWriter(toleranceChecker);
 
 	SpikeJab<Cell> *spikeJab = new SpikeJab<Cell>(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
-	sim.addSteerer(spikeJab);
+	sim->addSteerer(spikeJab);
 	
-	sim.run();
+	sim->run();
     }
     
 }
