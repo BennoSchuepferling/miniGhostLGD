@@ -49,7 +49,7 @@ public:
         public APITraits::HasSoA
     {};
 
-    //	*** 2D5PT ***
+    //	*** no stencil ***
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar) {}
 
@@ -521,9 +521,11 @@ public:
 	{
             //not really necessary is it?
 	    //Cell cell = grid->get(currentCoord);
-
+            //is there a way to access existing memory, not create new objects
+            
             CELL cell = CELL();
-	    for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
+	    
+            for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
                 cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
 
@@ -557,50 +559,59 @@ private:
 };
 
 int Cell::numberOfVars = 0;
+int Cell2D5PT::numberOfVars = 0;
+int Cell2D9PT::numberOfVars = 0;
+int Cell3D7PT::numberOfVars = 0;
+int Cell3D27PT::numberOfVars = 0;
+
+
+template<typename CELL>
+void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
+{
+
+    CELL::numberOfVars = *num_vars;
+
+    CellInitializer<CELL> *init = 
+            new CellInitializer<CELL>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
+    
+    //CheckerBoarding		
+    HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> > *sim = 
+            new HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> >(
+                init,
+    	        //MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
+    	        0,
+    	        *num_tsteps,
+    	        1);
+    
+    ToleranceChecker<CELL> *toleranceChecker = 
+            new ToleranceChecker<CELL>(1, *num_vars, *err_tol, source_total);
+    
+    sim->addWriter(toleranceChecker);
+
+    SpikeJab<CELL> *spikeJab = 
+            new SpikeJab<CELL>(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
+    
+    sim->addSteerer(spikeJab);
+    
+    sim->run();
+}
+
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
 extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
-{
-    Cell::numberOfVars = *num_vars;
-
-    std::cout << " <<<<<<<< " << *stencil << " >>>>>>>>>\n";
-        
+{        
     switch (*stencil) {
-        case STENCIL_NONE  : // do somethin
+        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
                              break;
-        case STENCIL_2D5PT : // do somethin else
+        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
                              break;
-        case STENCIL_2D9PT : // do somethin else but almost like the others
+        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
                              break;
-        case STENCIL_3D7PT : // freakin' do it 
+        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
                              break;
-        case STENCIL_3D27PT: // i swear u need to do it here too
+        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
                              break;
         default : std::cerr << " not a stecil \n";  break;
     }
- 
-//    Typemaps::initializeMaps();
-    {
-	//SerialSimulator<Cell> sim(new CellInitializer(dimX, dimY, num_timesteps));
-	CellInitializer<Cell> *init =  new CellInitializer<Cell>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
-	
-	//CheckerBoarding		
-	HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> > *sim = 
-                        new HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> >(
-			init,
-			//MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
-			0,
-			*num_tsteps,
-			1);
-	
-	ToleranceChecker<Cell> *toleranceChecker = new ToleranceChecker<Cell>(1, *num_vars, *err_tol, source_total);
-	sim->addWriter(toleranceChecker);
-
-	SpikeJab<Cell> *spikeJab = new SpikeJab<Cell>(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
-	sim->addSteerer(spikeJab);
-	
-	sim->run();
-    }
-    
 }
