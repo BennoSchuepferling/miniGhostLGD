@@ -588,15 +588,16 @@ private:
     double *src_total;
 };
 
-class SpikeJab : public Steerer<Cell>
+template<typename CELL>
+class SpikeJab : public Steerer<CELL>
 {
 public:
-    using Steerer<Cell>::CoordType;
-    using Steerer<Cell>::GridType;
-    using Steerer<Cell>::Topology;
+    using typename Steerer<CELL>::CoordType;
+    using typename Steerer<CELL>::GridType;
+    using typename Steerer<CELL>::Topology;
 
     SpikeJab (const unsigned ioPeriod, int numVars = 1, int numSpikes = 1, double *sourceTotal_ = NULL, double *spikes_ = NULL, int *spikeLocation_ = NULL) :
-        Steerer<Cell>(ioPeriod),
+        Steerer<CELL>(ioPeriod),
         numberOfVars(numVars),
         numberOfSpikes(numSpikes)
     {
@@ -613,15 +614,15 @@ public:
         SteererEvent event,
         std::size_t rank,
         bool lastCall,
-        SteererFeedback *feedback)
+        typename Steerer<CELL>::SteererFeedback *feedback)
     {
         // gibt es einen cooleren weg dem steerer zu sagen dass er den allerletzten step nichtmehr machen braucht?
-        if ( step == numberOfSpikes * getPeriod() ) 
+        if ( step == numberOfSpikes * this->getPeriod() ) 
 	{
 	    return;
 	}
 		
-	currentSpike = ( (int)step / getPeriod() );
+	currentSpike = ( (int)step / this->getPeriod() );
 	
 	const Coord<3> currentCoord( spikeLocation[(currentSpike * 4) + 1], 
 				     spikeLocation[(currentSpike * 4) + 2],
@@ -633,7 +634,7 @@ public:
             //not really necessary is it?
 	    //Cell cell = grid->get(currentCoord);
 
-            Cell cell = Cell();
+            CELL cell = CELL();
 	    for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
                 cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
@@ -707,7 +708,7 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 	ToleranceChecker<Cell> *toleranceChecker = new ToleranceChecker<Cell>(1, *num_vars, *err_tol, source_total);
 	sim.addWriter(toleranceChecker);
 
-	SpikeJab *spikeJab = new SpikeJab(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
+	SpikeJab<Cell> *spikeJab = new SpikeJab<Cell>(*num_tsteps, *num_vars, *num_spikes, source_total, spikes, spike_loc);
 	sim.addSteerer(spikeJab);
 	
 	sim.run();
