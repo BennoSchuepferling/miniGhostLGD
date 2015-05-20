@@ -428,14 +428,14 @@ LIBFLATARRAY_REGISTER_SOA(
                           )
 
 
-
-class CellInitializer : public SimpleInitializer<Cell>
+template<typename CELL>
+class CellInitializer : public SimpleInitializer<CELL>
 {
 public:
-    using Initializer::Topology;
+    using SimpleInitializer<CELL>::Topology;
 
     CellInitializer(const unsigned dimX, const unsigned dimY, const unsigned dimZ, const unsigned num_timesteps, int numVars, double *sourceTotal_, double *spikes_ , int *spikeLoc) :
-    SimpleInitializer<Cell>(Coord<3>(dimX, dimY, dimZ), num_timesteps),
+    SimpleInitializer<CELL>(Coord<3>(dimX, dimY, dimZ), num_timesteps),
     dimX(dimX),
     dimY(dimY),
     dimZ(dimZ),
@@ -446,7 +446,7 @@ public:
         spikeLocation = spikeLoc;
     }
 
-    virtual void grid(GridBase<Cell, 3> *ret)
+    virtual void grid(GridBase<CELL, 3> *ret)
     {
         
         //Cell::numberOfVars = numberOfVars;
@@ -470,7 +470,7 @@ um checkerboard zu testen
 //new function in town - pseudoRand(*i);
 	    //seede den random nr generator 
 	    
-            Cell cell = Cell();
+            CELL cell = CELL();
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
@@ -487,7 +487,7 @@ um checkerboard zu testen
 		
         if (rect.inBounds(c)) 
         {
-	    Cell cell = Cell();
+	    CELL cell = CELL();
  
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
@@ -695,7 +695,7 @@ extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars
 //    Typemaps::initializeMaps();
     {
 	//SerialSimulator<Cell> sim(new CellInitializer(dimX, dimY, num_timesteps));
-	CellInitializer *init =  new CellInitializer(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
+	CellInitializer<Cell> *init =  new CellInitializer<Cell>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
 	
 	//CheckerBoarding		
 	HiParSimulator::HiParSimulator<Cell, RecursiveBisectionPartition<3> > sim(
