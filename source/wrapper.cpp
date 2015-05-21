@@ -207,7 +207,7 @@ public:
             hoodOld[FixedCoord< 0,  1,  0>()].temp()[currentVar] +	
             hoodOld[FixedCoord< 1,  0,  0>()].temp()[currentVar] +
             hoodOld[FixedCoord< 0,  0, -1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar]) / (1.0 / 7.0); 
+            hoodOld[FixedCoord< 0,  0,  1>()].temp()[currentVar]) * (1.0 / 7.0); 
     }
 
     template<typename HOOD_OLD, typename HOOD_NEW>
@@ -290,7 +290,7 @@ public:
             
             hoodOld[FixedCoord< 1, -1,  1>()].temp()[currentVar] +
             hoodOld[FixedCoord< 1,  0,  1>()].temp()[currentVar] +
-            hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) / (1.0 / 27.0);
+            hoodOld[FixedCoord< 1,  1,  1>()].temp()[currentVar]) * (1.0 / 27.0);
     }
 
     template<typename HOOD_OLD, typename HOOD_NEW>
