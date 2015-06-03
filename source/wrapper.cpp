@@ -408,10 +408,11 @@ public:
     using typename ParallelWriter<CELL>::CoordType;
     typedef typename ParallelWriter<CELL>::GridType GridType;
 	
-    ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0,  double *sourceTotal = NULL, int *gridsToSum_ = NULL) :
+    ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0, int reportDif = 10,  double *sourceTotal = NULL, int *gridsToSum_ = NULL) :
     Clonable<ParallelWriter<CELL>, ToleranceChecker>("", outputPeriod),
     num_vars(numberOfVars),
-    err_tol(errorTol)
+    err_tol(errorTol),
+    reportDif(reportDif)
     {
         src_total = sourceTotal;
         gridsToSum = gridsToSum_;
@@ -449,13 +450,21 @@ public:
                 {
                     // tag fuer einzigartigkeit
                     MPI_Allreduce(&localSum[currentVar], &globalSum[currentVar], 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    
-                    if( rank == 0 )
-            	        std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[currentVar] << "\n";
 
+                    tmp_err =  std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar];
+
+                    if( step % reportDif == 0 && rank == 0 )
+                    {
+                        std::cout << "Timestep " << step << " for variable " << currentVar << " the error is " 
+                                  << tmp_err << "; error tolerance is " << err_tol << "\n";
+                    }
+
+                    // MiniGhost usually hammers out an assert and kills itself - let's just don't
             	    if( ( std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar] ) > err_tol )
-            	        std::cout << "error_tol(" << step << ") has not been met for Variable " << currentVar << ": " << src_total[currentVar] << " - " << globalSum[currentVar]  << "\n";
-                    
+            	    {
+                        std::cout << "Timestep " << step << " for variable " << currentVar << " the error is " 
+                                  << tmp_err << "; error tolerance is " << err_tol << "\n";
+                    }   
                 }
                 // reset local and global sum since we're done with this step (better memcpy)
                 localSum[currentVar] = 0;
@@ -470,6 +479,8 @@ private:
     double globalSum[40] = {0}; 
     int num_vars;
     double err_tol;
+    int reportDif;
+    double tmp_err;
     double *src_total;
     int *gridsToSum;
 };
@@ -563,7 +574,7 @@ int Cell3D27PT::numberOfVars = 0;
 
 
 template<typename CELL>
-void runSimulation(int *nx, int *ny, int *nz, int *debug_grid, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
+void runSimulation(int *nx, int *ny, int *nz, int *report_dif, int *debug_grid, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {
 
     CELL::numberOfVars = *num_vars;
@@ -581,7 +592,7 @@ void runSimulation(int *nx, int *ny, int *nz, int *debug_grid, int *num_vars, in
     	        1);
     
     ToleranceChecker<CELL> *toleranceChecker = 
-            new ToleranceChecker<CELL>(1, *num_vars, *err_tol, source_total, grids_to_sum);
+            new ToleranceChecker<CELL>(1, *num_vars, *err_tol, *report_dif, source_total, grids_to_sum);
     
     sim->addWriter(toleranceChecker);
 
@@ -596,18 +607,18 @@ void runSimulation(int *nx, int *ny, int *nz, int *debug_grid, int *num_vars, in
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
-extern "C" void simulate_(int *nx, int *ny, int *nz, int *debug_grid, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
+extern "C" void simulate_(int *nx, int *ny, int *nz, int *report_dif, int *debug_grid, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {        
     switch (*stencil) {
-        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, report_dif, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, report_dif, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, report_dif, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, report_dif, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, report_dif, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
         default : std::cerr << " not a stecil \n";  break;
     }
