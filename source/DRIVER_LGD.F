@@ -72,28 +72,7 @@ CONTAINS
    
       IERR = 0
 
-      ! -------------------
-      ! Begin time stepping
-      ! -------------------
-      IF (MYPE == ROOT_PE) THEN
-!      WRITE(*,*) 'TEST'
-!      DO ISPIKE =1, NUM_SPIKES
-!         DO IVAR = 1, NUM_VARS
-!!	    SOURCE_TOTAL(IVAR) = IVAR
-!            WRITE (*,*) 'SPIKES(,): ', SPIKES( IVAR, ISPIKE )
-!         END DO
-!      END DO
- 
-      DO ISPIKE =1, NUM_SPIKES
-         DO IVAR = 0, 3
-!	    SOURCE_TOTAL(IVAR) = IVAR
-            WRITE (*,*) 'SPIKE_LOC(,): ', SPIKE_LOC( IVAR, ISPIKE )
-         END DO
-      END DO
-    END IF
-    
-
-      CALL simulate(GLOBAL_NX, GLOBAL_NY, GLOBAL_NZ, STENCIL, NUM_VARS, NUM_SPIKES, NUM_TSTEPS, ERROR_TOL, SOURCE_TOTAL, SPIKES, SPIKE_LOC)
+      CALL simulate(GLOBAL_NX, GLOBAL_NY, GLOBAL_NZ, STENCIL, NUM_VARS, NUM_SPIKES, NUM_TSTEPS, ERROR_TOL, SOURCE_TOTAL, SPIKES, SPIKE_LOC, GRIDS_TO_SUM)
 
    END SUBROUTINE DRIVER_LGD
 

@@ -21,16 +21,6 @@
 #define STENCIL_3D7PT 23
 #define STENCIL_3D27PT 24
 
-
-/*
-class MiniGhostContainer
-{
-public:
-    static int numberOfVars;
-};
-
-int MiniGhostContainer::numberOfVars = 0;
-*/
 using namespace LibGeoDecomp;
 
 
@@ -335,11 +325,9 @@ public:
     }
 
     virtual void grid(GridBase<CELL, 3> *ret)
-    {
-        
-        //Cell::numberOfVars = numberOfVars;
-        		
+    {   		
         CoordBox<3> rect = ret->boundingBox();        
+        
         for (CoordBox<3>::Iterator i = rect.begin(); i != rect.end(); ++i)
         {
 //coord c;
@@ -362,12 +350,12 @@ um checkerboard zu testen
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
-                cell.temp[currentVar] = 1;//Random::gen_d();
+                cell.temp[currentVar] = Random::gen_d();
             }
             
             ret->set(*i, cell);
 	}
-/*	
+	
 	// set multiple first spikes
         Coord<3> c( (unsigned) spikeLocation[1],
 	            (unsigned) spikeLocation[2],
@@ -390,7 +378,7 @@ um checkerboard zu testen
             ret->set(c, cell);
 
         }
-*/		    
+		    
         // update sourceTotal on every node
 	for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
         {
@@ -417,12 +405,13 @@ public:
     using typename ParallelWriter<CELL>::CoordType;
     typedef typename ParallelWriter<CELL>::GridType GridType;
 	
-    ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0,  double *sourceTotal = NULL) :
+    ToleranceChecker(const unsigned outputPeriod = 1, int numberOfVars = 1, double errorTol = 2500.0,  double *sourceTotal = NULL, int *gridsToSum_ = NULL) :
     Clonable<ParallelWriter<CELL>, ToleranceChecker>("", outputPeriod),
     num_vars(numberOfVars),
     err_tol(errorTol)
     {
         src_total = sourceTotal;
+        gridsToSum = gridsToSum_;
     }
 	
     void stepFinished(
@@ -433,33 +422,38 @@ public:
 		WriterEvent event,
 		std::size_t rank,
 		bool lastCall)
-    {		
+    {	
+
+	
 	// summing the local grid (not sure what access pattern is better)
 	for( int currentVar = 0 ; currentVar < num_vars ; ++currentVar )
 	{
-	    for (typename RegionType::Iterator i = validRegion.begin(); i != validRegion.end(); ++i) { 
-	        localSum[currentVar] += grid.get(*i).temp[currentVar];
-	    }
+            if( gridsToSum[currentVar] )
+            {
+	        for (typename RegionType::Iterator i = validRegion.begin(); i != validRegion.end(); ++i) { 
+	            localSum[currentVar] += grid.get(*i).temp[currentVar];
+	        }
+            }
 	} 
 			
 	// so we're done summing the local grid
         if(lastCall)
-        {
-            //tag fuer einzigartigkeit
-            MPI_Allreduce(localSum, globalSum, num_vars, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        
-            // we're still missing the feature how many of our grids (variables in this case) should be summed
-            //(see MG_BUFINIT.F)
-            
+        {                                  
             // checking error tolerance
             for( int currentVar = 0 ; currentVar < num_vars ; ++currentVar )
             {
-                if( rank == 0 )
-            	    std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[currentVar] << "\n";
-
-            	if( ( std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar] ) > err_tol )
-            	    std::cout << "error_tol(" << step << ") has not been met for Variable " << currentVar << "\n";
+                if( gridsToSum[currentVar] )
+                {
+                    // tag fuer einzigartigkeit
+                    MPI_Allreduce(&localSum[currentVar], &globalSum[currentVar], 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                     
+                    if( rank == 0 )
+            	        std::cout << "globalSum(" << step << ") = " << std::setprecision (15) << globalSum[currentVar] << "\n";
+
+            	    if( ( std::abs(src_total[currentVar] - globalSum[currentVar]) / src_total[currentVar] ) > err_tol )
+            	        std::cout << "error_tol(" << step << ") has not been met for Variable " << currentVar << ": " << src_total[currentVar] << " - " << globalSum[currentVar]  << "\n";
+                    
+                }
                 // reset local and global sum since we're done with this step (better memcpy)
                 localSum[currentVar] = 0;
                 globalSum[currentVar] = 0;
@@ -474,6 +468,7 @@ private:
     int num_vars;
     double err_tol;
     double *src_total;
+    int *gridsToSum;
 };
 
 template<typename CELL>
@@ -520,20 +515,19 @@ public:
 	if(validRegion.count(currentCoord))
 	{
             //not really necessary is it?
-	    //Cell cell = grid->get(currentCoord);
+	    //Cell cell = grid->get(currentCoord); <- MG is'nt doing this either... not adding this value but just overwriting it??? (why)
             //is there a way to access existing memory, not create new objects
-            
             CELL cell = CELL();
 	    
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
                 cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
 
-                std::cout << "WARNING---------------------------------------------------\n"
-                          << "WARNING: We're at Location " <<  spikeLocation[(currentSpike * 4) + 1] << ", " << spikeLocation[(currentSpike * 4) + 2] << ", " << spikeLocation[(currentSpike * 4) + 3] << "\n"
-                          << "WARNING: We're rank: " << rank << "\n"
-                          << "WARNING: and we 're setting spike " << std::setprecision (15) << cell.temp[currentVar] << " into grid at timestep " << step << "\n"
-                          << "WARNING---------------------------------------------------\n";
+//                std::cout << "WARNING---------------------------------------------------\n"
+//                          << "WARNING: We're at Location " <<  spikeLocation[(currentSpike * 4) + 1] << ", " << spikeLocation[(currentSpike * 4) + 2] << ", " << spikeLocation[(currentSpike * 4) + 3] << "\n"
+//                          << "WARNING: We're rank: " << rank << "\n"
+//                          << "WARNING: and we 're setting spike " << std::setprecision (15) << cell.temp[currentVar] << " into grid at timestep " << step << "\n"
+//                          << "WARNING---------------------------------------------------\n";
             }
             grid->set(currentCoord, cell);	
 			
@@ -566,7 +560,7 @@ int Cell3D27PT::numberOfVars = 0;
 
 
 template<typename CELL>
-void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
+void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {
 
     CELL::numberOfVars = *num_vars;
@@ -584,7 +578,7 @@ void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, in
     	        1);
     
     ToleranceChecker<CELL> *toleranceChecker = 
-            new ToleranceChecker<CELL>(1, *num_vars, *err_tol, source_total);
+            new ToleranceChecker<CELL>(1, *num_vars, *err_tol, source_total, grids_to_sum);
     
     sim->addWriter(toleranceChecker);
 
@@ -599,18 +593,18 @@ void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, in
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
-extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc)
+extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {        
     switch (*stencil) {
-        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
+        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
+        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
+        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
+        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc);
+        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
         default : std::cerr << " not a stecil \n";  break;
     }
