@@ -312,12 +312,13 @@ class CellInitializer : public SimpleInitializer<CELL>
 public:
     using SimpleInitializer<CELL>::Topology;
 
-    CellInitializer(const unsigned dimX, const unsigned dimY, const unsigned dimZ, const unsigned num_timesteps, int numVars, double *sourceTotal_, double *spikes_ , int *spikeLoc) :
+    CellInitializer(const unsigned dimX, const unsigned dimY, const unsigned dimZ, const unsigned num_timesteps, int numVars, int debug_grid, double *sourceTotal_, double *spikes_ , int *spikeLoc) :
     SimpleInitializer<CELL>(Coord<3>(dimX, dimY, dimZ), num_timesteps),
     dimX(dimX),
     dimY(dimY),
     dimZ(dimZ),
-    numberOfVars(numVars)
+    numberOfVars(numVars),
+    debugGrid(debug_grid)
     {
         sourceTotal = sourceTotal_;
         spikes = spikes_;
@@ -350,7 +351,8 @@ um checkerboard zu testen
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
-                cell.temp[currentVar] = Random::gen_d();
+                if(debugGrid) cell.temp[currentVar] = 1;
+                else cell.temp[currentVar] = Random::gen_d();
             }
             
             ret->set(*i, cell);
@@ -392,6 +394,7 @@ private:
     unsigned dimY;
     unsigned dimZ;
     int numberOfVars;
+    int debugGrid;
     double *sourceTotal;
     double *spikes;
     int *spikeLocation;
@@ -560,13 +563,13 @@ int Cell3D27PT::numberOfVars = 0;
 
 
 template<typename CELL>
-void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
+void runSimulation(int *nx, int *ny, int *nz, int *debug_grid, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {
 
     CELL::numberOfVars = *num_vars;
 
     CellInitializer<CELL> *init = 
-            new CellInitializer<CELL>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, source_total, spikes, spike_loc);
+            new CellInitializer<CELL>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, *debug_grid, source_total, spikes, spike_loc);
     
     //CheckerBoarding		
     HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> > *sim = 
@@ -593,18 +596,18 @@ void runSimulation(int *nx, int *ny, int *nz, int *num_vars, int *num_spikes, in
 
 //LINE DOMINANT VS ROW DOMINANT - WATCH OUT !
 //double spikes[*num_spikes][*num_vars], double spike_loc[*num_spikes][4]
-extern "C" void simulate_(int *nx, int *ny, int *nz, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
+extern "C" void simulate_(int *nx, int *ny, int *nz, int *debug_grid, int *stencil, int *num_vars, int *num_spikes, int *num_tsteps, double *err_tol, double *source_total, double *spikes, int *spike_loc, int *grids_to_sum)
 {        
     switch (*stencil) {
-        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_NONE  : runSimulation<Cell>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_2D5PT : runSimulation<Cell2D5PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_2D9PT : runSimulation<Cell2D9PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_3D7PT : runSimulation<Cell3D7PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
-        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
+        case STENCIL_3D27PT: runSimulation<Cell3D27PT>(nx, ny, nz, debug_grid, num_vars, num_spikes, num_tsteps, err_tol, source_total, spikes, spike_loc, grids_to_sum);
                              break;
         default : std::cerr << " not a stecil \n";  break;
     }
