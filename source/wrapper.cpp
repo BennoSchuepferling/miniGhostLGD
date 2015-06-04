@@ -331,23 +331,14 @@ public:
         
         for (CoordBox<3>::Iterator i = rect.begin(); i != rect.end(); ++i)
         {
-//coord c;
-//Topology.normalize(c)
-//seed = c.toIndex(dim)
-
-//neue frage: wenn wir nach je koordinate eine pseudorand erzeugen, dann sind alle pro variable gleich also vlt sowas wie
-//seed = global_gridsize * currentVar + c.toIndex(dim)
-//oder wie ist das mit dem seed und der randomfolge??
-
-
 /*Tabelle fuer: welcher rang welche start und end coords hat (global)
 fuer ein paar problemgroessen
 um checkerboard zu testen
 */
-//new function in town - pseudoRand(*i);
-	    //seede den random nr generator 
-	    
-            CELL cell = CELL();
+	    CELL cell = CELL();
+            
+	    // seeding RNG with coordinate so ghostzone cells will be initialized identically
+            Initializer<CELL>::seedRNG(*i);
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
@@ -370,11 +361,6 @@ um checkerboard zu testen
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
                 cell.temp[currentVar] = spikes[currentVar];
-
-                std::cout << "WARNING---------------------------------------------------\n"
-	              << "WARNING: We're at Location " <<  spikeLocation[1] << ", " << spikeLocation[2] << ", " << spikeLocation[3] << "\n"
-	              << "WARNING: and we 're setting the initial spike " << std::setprecision (15) << spikes[currentVar] << " into the grid\n"
-		      << "WARNING---------------------------------------------------\n";
             }
             
             ret->set(c, cell);
@@ -537,11 +523,6 @@ public:
             {
                 cell.temp[currentVar] = spikes[(currentSpike * numberOfVars) + currentVar];  
 
-//                std::cout << "WARNING---------------------------------------------------\n"
-//                          << "WARNING: We're at Location " <<  spikeLocation[(currentSpike * 4) + 1] << ", " << spikeLocation[(currentSpike * 4) + 2] << ", " << spikeLocation[(currentSpike * 4) + 3] << "\n"
-//                          << "WARNING: We're rank: " << rank << "\n"
-//                          << "WARNING: and we 're setting spike " << std::setprecision (15) << cell.temp[currentVar] << " into grid at timestep " << step << "\n"
-//                          << "WARNING---------------------------------------------------\n";
             }
             grid->set(currentCoord, cell);	
 			
