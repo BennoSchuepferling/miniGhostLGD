@@ -13,7 +13,7 @@
 #include "../libgeodecomp/src/libgeodecomp.h"
 #include <libflatarray/short_vec.hpp>
 #include <cmath>
-
+#include <libgeodecomp/geometry/partitions/checkerboardingpartition.h> //why extra?
 
 #define STENCIL_NONE 20
 #define STENCIL_2D5PT 21 //  ! Default
@@ -564,8 +564,8 @@ void runSimulation(int *nx, int *ny, int *nz, int *report_dif, int *debug_grid, 
             new CellInitializer<CELL>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, *debug_grid, source_total, spikes, spike_loc);
     
     //CheckerBoarding		
-    HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> > *sim = 
-            new HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> >(
+    HiParSimulator::HiParSimulator<CELL, CheckerboardingPartition<3> > *sim = 
+            new HiParSimulator::HiParSimulator<CELL, CheckerboardingPartition<3> >(
                 init,
     	        //MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
     	        0,
