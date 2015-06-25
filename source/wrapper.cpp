@@ -1,19 +1,6 @@
-/**
- * Minimal 2D Jacobi example. Code which is commented out demos how to
- * add a PPMWriter for output.
- */
-/*
-#include <libgeodecomp/io/simpleinitializer.h>
-#include <libgeodecomp/io/ppmwriter.h>
-#include <libgeodecomp/io/simplecellplotter.h>
-#include <libgeodecomp/io/tracingwriter.h>
-#include <libgeodecomp/parallelization/serialsimulator.h>
-#include <libgeodecomp/parallelization/hiparsimulator.h>
-*/
 #include "../libgeodecomp/src/libgeodecomp.h"
 #include <libflatarray/short_vec.hpp>
 #include <cmath>
-#include <libgeodecomp/geometry/partitions/checkerboardingpartition.h> //why extra?
 
 #define STENCIL_NONE 20
 #define STENCIL_2D5PT 21 //  ! Default
@@ -30,18 +17,17 @@ public:
     class API :
         public APITraits::HasFixedCoordsOnlyUpdate,
         public APITraits::HasUpdateLineX,
-        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
-	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
-        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasCubeTopology<3>,
         public APITraits::HasSoA
     {};
 
     //	*** no stencil ***
     template<typename HOOD_OLD, typename HOOD_NEW>
-    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar) {}
+    static void updateSingleStencil(HOOD_OLD& hoodOld, HOOD_NEW& hoodNew, int currentVar) {
+        hoodNew.temp()[currentVar] = hoodOld[FixedCoord<0,  0,  0>()].temp()[currentVar];
+    }
 
     template<typename HOOD_OLD, typename HOOD_NEW>
     static void updateLineX(HOOD_OLD& hoodOld, int indexEnd,
@@ -71,12 +57,9 @@ public:
     class API :
         public APITraits::HasFixedCoordsOnlyUpdate,
         public APITraits::HasUpdateLineX,
-        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
-	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
-        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasCubeTopology<3>,
         public APITraits::HasSoA
     {};
 
@@ -122,12 +105,9 @@ public:
     class API :
         public APITraits::HasFixedCoordsOnlyUpdate,
         public APITraits::HasUpdateLineX,
-        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
-	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+	public APITraits::HasStencil<Stencils::Moore<3, 1> >,
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
-        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasCubeTopology<3>,
         public APITraits::HasSoA
     {};
 
@@ -177,12 +157,9 @@ public:
     class API :
         public APITraits::HasFixedCoordsOnlyUpdate,
         public APITraits::HasUpdateLineX,
-        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
-	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
+        public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
-        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasCubeTopology<3>,
         public APITraits::HasSoA
     {};
     
@@ -229,12 +206,9 @@ public:
     class API :
         public APITraits::HasFixedCoordsOnlyUpdate,
         public APITraits::HasUpdateLineX,
-        //public APITraits::HasStencil<Stencils::VonNeumann<3, 1> >, 
 	public APITraits::HasStencil<Stencils::Moore<3, 1> >, //contains all spatial neighbours
         public APITraits::HasOpaqueMPIDataType<Cell>,
-        public APITraits::HasTorusTopology<3>,	// periodische randbedingung - cube ist konstant
-        //public APITraits::HasCubeTopology<3>,
-        //public APITraits::HasPredefinedMPIDataType<double>,
+        public APITraits::HasCubeTopology<3>,
         public APITraits::HasSoA
     {};
    
@@ -331,10 +305,6 @@ public:
         
         for (CoordBox<3>::Iterator i = rect.begin(); i != rect.end(); ++i)
         {
-/*Tabelle fuer: welcher rang welche start und end coords hat (global)
-fuer ein paar problemgroessen
-um checkerboard zu testen
-*/
 	    CELL cell = CELL();
             
 	    // seeding RNG with coordinate so ghostzone cells will be initialized identically
@@ -342,7 +312,7 @@ um checkerboard zu testen
 
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
             {
-                if(debugGrid) cell.temp[currentVar] = 1;
+                if(debugGrid) cell.temp[currentVar] = 0;
                 else cell.temp[currentVar] = Random::gen_d();
             }
             
@@ -499,7 +469,7 @@ public:
         bool lastCall,
         typename Steerer<CELL>::SteererFeedback *feedback)
     {
-        // gibt es einen cooleren weg dem steerer zu sagen dass er den allerletzten step nichtmehr machen braucht?
+
         if ( step == numberOfSpikes * this->getPeriod() ) 
 	{
 	    return;
@@ -511,12 +481,10 @@ public:
 				     spikeLocation[(currentSpike * 4) + 2],
 				     spikeLocation[(currentSpike * 4) + 3]);
 	
-	// setting spikes even in ghostzones							
+	// setting spikes even in ghostzones
 	if(validRegion.count(currentCoord))
 	{
-            //not really necessary is it?
 	    //Cell cell = grid->get(currentCoord); <- MG is'nt doing this either... not adding this value but just overwriting it??? (why)
-            //is there a way to access existing memory, not create new objects
             CELL cell = CELL();
 	    
             for( int currentVar = 0; currentVar < numberOfVars; currentVar++ )
@@ -563,11 +531,9 @@ void runSimulation(int *nx, int *ny, int *nz, int *report_dif, int *debug_grid, 
     CellInitializer<CELL> *init = 
             new CellInitializer<CELL>(*nx, *ny, *nz, (*num_tsteps * *num_spikes), *num_vars, *debug_grid, source_total, spikes, spike_loc);
     
-    //CheckerBoarding		
-    HiParSimulator::HiParSimulator<CELL, CheckerboardingPartition<3> > *sim = 
-            new HiParSimulator::HiParSimulator<CELL, CheckerboardingPartition<3> >(
+    HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> > *sim = 
+            new HiParSimulator::HiParSimulator<CELL, RecursiveBisectionPartition<3> >(
                 init,
-    	        //MPILayer().rank() ? 0 : new TracingBalancer(new NoOpBalancer()),
     	        0,
     	        *num_tsteps,
     	        1);
