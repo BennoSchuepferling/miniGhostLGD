@@ -128,8 +128,6 @@ CONTAINS
 
          CASE ( COMM_METHOD_LGD )
 
-            CALL MG_BUF_BSPMA ( IERR )
-
          CASE DEFAULT
 
             CALL MG_ASSERT ( -1, 'MG_BUFINIT: Unknown COMM_METHOD', COMM_METHOD )

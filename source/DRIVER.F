@@ -134,25 +134,18 @@
 
       DEBUG_GRID = DEBUG_GRID_IN
 
-      ! if LGD is defined call cpp wrapper and dont to anything else
-      ! otherwise proceed with setup etc.
-
-      ! TODO: adjust switches (SERIAL?, LGD)
-      ! TODO: find params
-#if defined _MG_LGD
-      CALL simulate(NX, NY, NZ, NUM_VARS, NUM_SPIKES, NUM_TSTEPS, ERROR_TOL)
-
-#else
       ! Set up computing environment (e.g. MPI if selected).
       ! Set 3d processor grid, position in processor grid.
       ! Set neighbors, message tag initialization, spikes (for testing).
       CALL MG_INIT ( IERR )
+      
+      IF ( COMM_METHOD /= COMM_METHOD_LGD ) THEN
+         ! Initialize performance capture
+         CALL MG_PERF_INIT ( IERR )
 
-      ! Initialize performance capture
-      CALL MG_PERF_INIT ( IERR )
-
-      ! Allocate local domain, including space for all variables, including ghosts:
-      CALL MG_GRID_INIT ( IERR )
+         ! Allocate local domain, including space for all variables, including ghosts:
+         CALL MG_GRID_INIT ( IERR )
+      ENDIF
 
       CALL MG_BUFINIT ( IERR )
       CALL MG_ASSERT ( IERR, 'MINIGHOST: MG_BUFINIT', IERR )
@@ -179,46 +172,45 @@
 
       END SELECT ! COMM_METHOD
 
-      !  Report results.
+      IF ( COMM_METHOD /= COMM_METHOD_LGD ) THEN
+         !  Report results.
+         CALL MG_PERF_REPORT ( COMM_METHOD, STENCIL, IERR )
+         CALL MG_ASSERT ( IERR, 'MINIGHOST: PERF_REPORT', COMM_METHOD )
 
-      CALL MG_PERF_REPORT ( COMM_METHOD, STENCIL, IERR )
-      CALL MG_ASSERT ( IERR, 'MINIGHOST: PERF_REPORT', COMM_METHOD )
-
-      ! Done. Deallocate memory and terminate.
-
-      CALL MG_GRID_DEALLOC ( IERR )
-
-      IF ( ALLOCATED ( SEND_BUFFER_BACK ) )  &
-         DEALLOCATE ( SEND_BUFFER_BACK )
-      IF ( ALLOCATED ( RECV_BUFFER_BACK ) )  &
-         DEALLOCATE ( RECV_BUFFER_BACK )
-      IF ( ALLOCATED ( SEND_BUFFER_FRONT ) ) &
-         DEALLOCATE ( SEND_BUFFER_FRONT )
-      IF ( ALLOCATED ( RECV_BUFFER_FRONT ) ) &
-         DEALLOCATE ( RECV_BUFFER_FRONT )
-      IF ( ALLOCATED ( SEND_BUFFER_EAST ) )  &
-         DEALLOCATE ( SEND_BUFFER_EAST )
-      IF ( ALLOCATED ( RECV_BUFFER_EAST ) )  &
-         DEALLOCATE ( RECV_BUFFER_EAST )
-      IF ( ALLOCATED ( SEND_BUFFER_WEST ) )  &
-         DEALLOCATE ( SEND_BUFFER_WEST )
-      IF ( ALLOCATED ( RECV_BUFFER_WEST ) )  &
-         DEALLOCATE ( RECV_BUFFER_WEST )
-      IF ( ALLOCATED ( SEND_BUFFER_NORTH ) ) &
-         DEALLOCATE ( SEND_BUFFER_NORTH )
-      IF ( ALLOCATED ( RECV_BUFFER_NORTH ) ) &
-         DEALLOCATE ( RECV_BUFFER_NORTH )
-      IF ( ALLOCATED ( SEND_BUFFER_SOUTH ) ) &
-         DEALLOCATE ( SEND_BUFFER_SOUTH )
-      IF ( ALLOCATED ( RECV_BUFFER_SOUTH ) ) &
-         DEALLOCATE ( RECV_BUFFER_SOUTH )
+         ! Done. Deallocate memory and terminate.
+         CALL MG_GRID_DEALLOC ( IERR )
+   
+         IF ( ALLOCATED ( SEND_BUFFER_BACK ) )  &
+            DEALLOCATE ( SEND_BUFFER_BACK )
+         IF ( ALLOCATED ( RECV_BUFFER_BACK ) )  &
+            DEALLOCATE ( RECV_BUFFER_BACK )
+         IF ( ALLOCATED ( SEND_BUFFER_FRONT ) ) &
+            DEALLOCATE ( SEND_BUFFER_FRONT )
+         IF ( ALLOCATED ( RECV_BUFFER_FRONT ) ) &
+            DEALLOCATE ( RECV_BUFFER_FRONT )
+         IF ( ALLOCATED ( SEND_BUFFER_EAST ) )  &
+            DEALLOCATE ( SEND_BUFFER_EAST )
+         IF ( ALLOCATED ( RECV_BUFFER_EAST ) )  &
+            DEALLOCATE ( RECV_BUFFER_EAST )
+         IF ( ALLOCATED ( SEND_BUFFER_WEST ) )  &
+            DEALLOCATE ( SEND_BUFFER_WEST )
+         IF ( ALLOCATED ( RECV_BUFFER_WEST ) )  &
+            DEALLOCATE ( RECV_BUFFER_WEST )
+         IF ( ALLOCATED ( SEND_BUFFER_NORTH ) ) &
+            DEALLOCATE ( SEND_BUFFER_NORTH )
+         IF ( ALLOCATED ( RECV_BUFFER_NORTH ) ) &
+            DEALLOCATE ( RECV_BUFFER_NORTH )
+         IF ( ALLOCATED ( SEND_BUFFER_SOUTH ) ) &
+            DEALLOCATE ( SEND_BUFFER_SOUTH )
+         IF ( ALLOCATED ( RECV_BUFFER_SOUTH ) ) &
+            DEALLOCATE ( RECV_BUFFER_SOUTH )
+   
+      ENDIF
 
       IF ( ALLOCATED ( MSG_REQS ) ) &
          DEALLOCATE ( MSG_REQS )
       IF ( ALLOCATED ( MSG_TAGS ) ) &
          DEALLOCATE ( MSG_TAGS )
-
-#endif
 
       RETURN
 
