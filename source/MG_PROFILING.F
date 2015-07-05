@@ -641,15 +641,6 @@ MODULE MG_PROFILING_MOD
                               ROOT_PE, MPI_COMM_WORLD, IERR )
             CALL MG_ASSERT ( IERR, 'REPORT_PERF: MPI_GATHER(TIME_SVAF)', 1 )
 
-         CASE ( COMM_METHOD_LGD )
-
-           ! TODO: ??
-            CALL MPI_GATHER ( MG_PERF%TIME_BSPMA_PE, 1, MPI_REAL8,           &
-                              TIME_COMM_METHOD_ALL,  1, MPI_REAL8,           &
-                              ROOT_PE, MPI_COMM_WORLD, IERR )
-            CALL MG_ASSERT ( IERR, 'REPORT_PERF: MPI_GATHER(TIME_BSPMA)', 1 )
-
-
       END SELECT
 
       IF ( &
@@ -1259,10 +1250,6 @@ MODULE MG_PROFILING_MOD
       
                   WRITE(OUTPUT_LOC,*) 'Communication strategy: one variable at a time (COMM_METHOD_SVAF)'
      
-               CASE ( COMM_METHOD_LGD )
-     
-                  WRITE(OUTPUT_LOC,*) 'Communication strategy: LibGeoDecomp (COMM_METHOD_LGD)'
-
                CASE DEFAULT
       
                   WRITE(OUTPUT_LOC,*) '** Warning ** Unknown communication strategy'
