@@ -1505,8 +1505,6 @@ MODULE MG_PROFILING_MOD
             WRITE(OUTPUT_LOC,*) 'Comm_strategy: full message aggregation (COMM_METHOD_BSPMA)'
          CASE (COMM_METHOD_SVAF)
             WRITE(OUTPUT_LOC,*) 'Comm_strategy: one variable at a time (COMM_METHOD_SVAF)'
-         CASE (COMM_METHOD_LGD)
-            WRITE(OUTPUT_LOC,*) 'Comm_strategy: LibGeoDecomp (COMM_METHOD_LGD)'
       END SELECT
 
       SELECT CASE (STENCIL)
